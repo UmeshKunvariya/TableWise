@@ -8,7 +8,14 @@ sees each party appear instantly on a dashboard and taps to clear them as they'r
 
 ## Status
 
-Early development. Setting up the initial scaffold.
+Steps 1–5 of the build order in [`docs/PLAN.md`](docs/PLAN.md) are implemented: the
+app scaffold and theme, the database schema, owner auth, the geofenced join flow,
+and the live customer status page. Together these give a working end-to-end
+customer path — scan, join, watch your position update.
+
+Not built yet: the owner dashboard, QR poster generation, the menu upload and
+viewer, and admin approvals (steps 6–10). Until the dashboard exists, watch the
+queue through the Supabase Studio table view.
 
 ## Stack
 
@@ -34,9 +41,23 @@ Requires Node.js 20+ and a Supabase project.
 
 ```bash
 npm install
-cp .env.example .env.local   # then fill in your Supabase credentials
+npx supabase start           # local Postgres, Auth and Realtime (needs Docker)
+cp .env.example .env.local   # then fill in the credentials supabase start prints
 npm run dev
 ```
 
 Never commit `.env.local`. The service role key bypasses all database access rules and
 must stay server-side.
+
+## Tests
+
+```bash
+npm test        # geofence logic + schema, RLS and RPC behaviour
+npm run build   # also runs a full typecheck
+```
+
+`supabase/tests/schema.test.mjs` runs the real migrations against an in-process
+Postgres (PGlite), so the schema, the RLS policies and the ticket-allocation
+logic are testable without Docker. It stubs the Supabase-provided `auth` and
+`realtime` schemas — `npx supabase db reset` against the local stack remains the
+authoritative check.
