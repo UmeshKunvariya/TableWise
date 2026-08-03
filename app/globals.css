@@ -1,0 +1,66 @@
+@import "tailwindcss";
+
+/*
+ * TableWise theme — light, warm, restaurant-facing.
+ * Every screen here is a phone held outdoors, so surfaces stay light and
+ * contrast stays high. There is deliberately no dark mode: the customer
+ * page must look identical to the printed QR poster beside it.
+ * Tokens are defined once here; components never hardcode a hex value.
+ */
+@theme {
+  /* Warm neutral surfaces */
+  --color-surface: #fdfbf7;
+  --color-surface-raised: #ffffff;
+  --color-surface-sunken: #f4efe6;
+  --color-border: #e6ddcf;
+  --color-border-strong: #d3c6b2;
+
+  /* Ink */
+  --color-ink: #2a2521;
+  --color-ink-muted: #6d6358;
+  --color-ink-faint: #9a9084;
+
+  /* Deep green — primary actions */
+  --color-primary: #1f5240;
+  --color-primary-hover: #174032;
+  --color-primary-soft: #e7efeb;
+  --color-primary-fg: #ffffff;
+
+  /* Terracotta — accent, ticket numbers, highlights */
+  --color-accent: #c2603a;
+  --color-accent-hover: #a54e2d;
+  --color-accent-soft: #f9ece6;
+  --color-accent-fg: #ffffff;
+
+  /* Status */
+  --color-success: #2f7a4f;
+  --color-success-soft: #e8f2eb;
+  --color-danger: #b3402c;
+  --color-danger-soft: #fbeae6;
+  --color-warning: #97701a;
+  --color-warning-soft: #fbf2dd;
+
+  --radius-card: 1rem;
+  --radius-control: 0.625rem;
+
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--color-surface);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+  }
+
+  /* Keyboard focus stays visible on every interactive element. */
+  :focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+}
