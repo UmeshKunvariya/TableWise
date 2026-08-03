@@ -11,7 +11,7 @@ import { createClient } from "@/lib/supabase/client";
 export type Position = {
   ticket_number: number;
   people_ahead: number;
-  status: "waiting" | "seated" | "no_show";
+  status: "waiting" | "seated" | "no_show" | "left";
 };
 
 /**
@@ -75,6 +75,17 @@ export function LiveStatus({
         <p className="text-2xl font-semibold text-success">You&rsquo;re up!</p>
         <p className="text-ink-muted">
           Table {position.ticket_number} — please head to the counter.
+        </p>
+      </Card>
+    );
+  }
+
+  if (position.status === "left") {
+    return (
+      <Card className="flex flex-col items-center gap-2 py-10 text-center">
+        <p className="text-xl font-semibold text-ink">You&rsquo;ve left the queue</p>
+        <p className="text-ink-muted">
+          Scan the QR code again if you&rsquo;d like to rejoin.
         </p>
       </Card>
     );

@@ -98,6 +98,20 @@ begin
     raise exception 'queue is closed' using errcode = 'check_violation';
   end if;
 
+  -- Friendly rejection for the common case: an impatient customer submitting
+  -- twice. The partial unique index is what actually guarantees this under
+  -- concurrency; this check exists so the usual path returns a clear message
+  -- instead of a raw constraint violation.
+  if p_phone is not null and exists (
+    select 1 from public.queue_entries e
+    where e.restaurant_id = p_restaurant_id
+      and e.phone = p_phone
+      and e.status = 'waiting'
+  ) then
+    raise exception 'already in the queue'
+      using errcode = 'unique_violation';
+  end if;
+
   v_service_date := public.restaurant_service_date(p_restaurant_id);
   v_ticket := public.assign_ticket_number(p_restaurant_id);
 
@@ -150,6 +164,10 @@ $$;
 
 -- ---------------------------------------------------------------------------
 -- Leave the queue. Same reasoning as join_queue: the token is the credential.
+--
+-- Records 'left', not 'no_show'. A customer who tells us they are going is
+-- doing the right thing; counting them against the restaurant's no-show rate
+-- would make that statistic meaningless.
 -- ---------------------------------------------------------------------------
 create or replace function public.leave_queue(p_customer_token text)
 returns void
@@ -158,7 +176,7 @@ security definer
 set search_path = ''
 as $$
   update public.queue_entries
-  set status = 'no_show'
+  set status = 'left'
   where customer_token = p_customer_token
     and status = 'waiting';
 $$;

@@ -13,7 +13,10 @@ create extension if not exists pgcrypto;
 -- ---------------------------------------------------------------------------
 
 create type restaurant_status as enum ('pending', 'approved', 'suspended');
-create type queue_status as enum ('waiting', 'seated', 'no_show');
+-- 'left' and 'no_show' are deliberately distinct: a customer who chose to leave
+-- and one who ignored their call are different events, and collapsing them
+-- would corrupt the no-show rate the owner will eventually want to see.
+create type queue_status as enum ('waiting', 'seated', 'no_show', 'left');
 create type queue_source as enum ('qr', 'walk_in');
 
 -- ---------------------------------------------------------------------------
@@ -105,3 +108,17 @@ create table daily_counters (
 -- Belt and braces: even if allocation were bypassed, the database refuses duplicates.
 create unique index queue_entries_daily_ticket_idx
   on queue_entries (restaurant_id, service_date, ticket_number);
+
+-- One live entry per phone per restaurant.
+--
+-- Without this, a customer tapping "join" three times because the page felt
+-- slow occupies three places, and the owner calls out a party that has already
+-- been seated. Enforced as an index rather than only in join_queue so that two
+-- concurrent submissions cannot both pass a check-then-insert race.
+--
+-- Partial on 'waiting': the same number may of course return later the same
+-- evening. Partial on `phone is not null` so an owner can add anonymous
+-- walk-ins at the counter without tripping over it.
+create unique index queue_entries_one_live_per_phone_idx
+  on queue_entries (restaurant_id, phone)
+  where status = 'waiting' and phone is not null;

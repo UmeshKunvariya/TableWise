@@ -100,10 +100,12 @@ beforeAll(async () => {
     `update public.restaurants set status='approved' where id='${restaurantId}';`,
   );
 
+  // Distinct phone numbers: one live entry per number is now enforced by a
+  // partial unique index, so a shared fixture number would fail on the second join.
   for (let i = 0; i < 20; i++) {
     await db.query(
-      `select public.join_queue($1,$2,'555',2,19.0760,72.8777,5,'qr')`,
-      [restaurantId, `Party ${i + 1}`],
+      `select public.join_queue($1,$2,$3,2,19.0760,72.8777,5,'qr')`,
+      [restaurantId, `Party ${i + 1}`, `55500${i + 1}`],
     );
   }
 });
@@ -196,6 +198,105 @@ describe("get_my_position", () => {
       [all[4].customer_token],
     );
     expect(rows[0].people_ahead).toBe(3);
+  });
+});
+
+describe("one live entry per phone", () => {
+  it("refuses a second join from a number already waiting", async () => {
+    const join = () =>
+      db.query(
+        `select public.join_queue($1,'Double Tap','777001',2,19.0760,72.8777,5,'qr')`,
+        [restaurantId],
+      );
+
+    await join();
+    await expect(join()).rejects.toThrow(/already in the queue/i);
+  });
+
+  it("lets the same number rejoin after leaving", async () => {
+    await db.query(
+      `select public.join_queue($1,'Returner','777002',2,19.0760,72.8777,5,'qr')`,
+      [restaurantId],
+    );
+
+    const { rows } = await db.query(
+      `select customer_token from public.queue_entries
+       where phone='777002' and status='waiting'`,
+    );
+    await db.query(`select public.leave_queue($1)`, [rows[0].customer_token]);
+
+    // The guard is partial on 'waiting', so this must succeed.
+    await expect(
+      db.query(
+        `select public.join_queue($1,'Returner','777002',2,19.0760,72.8777,5,'qr')`,
+        [restaurantId],
+      ),
+    ).resolves.toBeDefined();
+  });
+
+  it("still allows several walk-ins with no phone number", async () => {
+    for (let i = 0; i < 3; i++) {
+      await db.query(
+        `select public.join_queue($1,'Counter walk-in',null,2,null,null,null,'walk_in')`,
+        [restaurantId],
+      );
+    }
+
+    const { rows } = await db.query(
+      `select count(*)::int as n from public.queue_entries
+       where restaurant_id=$1 and phone is null and status='waiting'`,
+      [restaurantId],
+    );
+    expect(rows[0].n).toBe(3);
+  });
+});
+
+describe("leaving the queue", () => {
+  it("records 'left', not 'no_show', so the no-show rate stays meaningful", async () => {
+    await db.query(
+      `select public.join_queue($1,'Departing','777003',2,19.0760,72.8777,5,'qr')`,
+      [restaurantId],
+    );
+
+    const { rows } = await db.query(
+      `select customer_token from public.queue_entries where phone='777003'`,
+    );
+    await db.query(`select public.leave_queue($1)`, [rows[0].customer_token]);
+
+    const { rows: after } = await db.query(
+      `select status from public.queue_entries where phone='777003'`,
+    );
+    expect(after[0].status).toBe("left");
+  });
+
+  it("stops counting a departed party against those behind them", async () => {
+    const { rows: joined } = await db.query(
+      `select public.join_queue($1,'Leaver','777004',2,19.0760,72.8777,5,'qr') as r`,
+      [restaurantId],
+    );
+    const leaverToken = joined[0].r.match(/\(([^,]+),/)[1];
+
+    await db.query(
+      `select public.join_queue($1,'Behind','777005',2,19.0760,72.8777,5,'qr')`,
+      [restaurantId],
+    );
+    const { rows: behind } = await db.query(
+      `select customer_token from public.queue_entries where phone='777005'`,
+    );
+
+    const before = await db.query(
+      `select people_ahead from public.get_my_position($1)`,
+      [behind[0].customer_token],
+    );
+    await db.query(`select public.leave_queue($1)`, [leaverToken]);
+    const after = await db.query(
+      `select people_ahead from public.get_my_position($1)`,
+      [behind[0].customer_token],
+    );
+
+    expect(after.rows[0].people_ahead).toBe(
+      before.rows[0].people_ahead - 1,
+    );
   });
 });
 

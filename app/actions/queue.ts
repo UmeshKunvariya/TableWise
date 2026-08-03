@@ -95,6 +95,15 @@ export async function joinQueue(
     .single<{ customer_token: string; ticket_number: number }>();
 
   if (error || !data) {
+    // 23505: this number is already waiting here — either a double tap, or two
+    // submissions racing past the check inside join_queue.
+    if (error?.code === "23505") {
+      return {
+        error:
+          "That number is already in the queue. Check your status page, or ask a staff member if you think this is wrong.",
+      };
+    }
+
     return { error: "We couldn't add you to the queue. Please try again." };
   }
 
