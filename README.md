@@ -39,21 +39,37 @@ database level.
 
 ## Setup
 
-Requires Node.js 20+ and a Supabase project.
+Requires Node.js 20+ and Docker Desktop (which on Windows requires WSL2).
 
 ```bash
 npm install
-npx supabase start           # local Postgres, Auth and Realtime (needs Docker)
-cp .env.example .env.local   # then fill in the credentials supabase start prints
+npm run db:start             # local Postgres, Auth, Realtime and Storage
+npm run db:reset             # apply migrations and load the dev seed
 npm run dev
 ```
 
-Never commit `.env.local`. The service role key bypasses all database access rules and
-must stay server-side.
+`db:start` prints an API URL, an anon key and a service role key. Copy
+`.env.example` to `.env.local` and paste them in. Never commit `.env.local` — the
+service role key bypasses all database access rules and must stay server-side.
+
+Useful local endpoints: Studio on `54323`, Postgres on `54322`, and the inbox that
+captures outgoing mail on `54324`.
+
+### The dev seed
+
+`supabase/seed.sql` creates a super admin owning an already-approved restaurant, so
+you get a working dashboard without hand-editing the database:
+
+- **owner@tablewise.test** / **tablewise123**
+- Demo Kitchen, reachable at `/r/demo-kitchen?t=localdevtoken00000000000000000000`
+
+Its coordinates are a **placeholder**. Joining the queue is geofenced, so either edit
+the `lat`/`lng` in the seed to your own location, or spoof the browser's — in Chrome,
+DevTools → ⋮ → More tools → Sensors → Location. Rerun `npm run db:reset` after editing.
 
 New restaurants register at `/signup` and land in `pending` — they cannot take a queue
-until approved. Approvals happen at `/admin`, which is only reachable by a super admin;
-promote your own account once, directly in the database:
+until approved. Approvals happen at `/admin`, reachable only by a super admin. To
+promote an account that didn't come from the seed:
 
 ```sql
 update profiles set is_super_admin = true where user_id = '<your-auth-user-id>';
