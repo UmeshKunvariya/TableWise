@@ -38,6 +38,14 @@ async function applyStubs() {
     create role anon;
     create role authenticated;
     create role service_role;
+    create schema if not exists storage;
+    create table storage.buckets (
+      id text primary key,
+      name text,
+      public boolean,
+      file_size_limit bigint,
+      allowed_mime_types text[]
+    );
     create table realtime._sent (payload jsonb, event text, topic text, priv boolean);
     create function realtime.send(jsonb, text, text, boolean) returns void
       language sql as $$ insert into realtime._sent values ($1,$2,$3,$4); $$;

@@ -48,6 +48,10 @@ create table restaurants (
   timezone text not null default 'UTC',
   status restaurant_status not null default 'pending',
   menu_pdf_path text,
+  -- The storage path is fixed per restaurant, so a replaced PDF would keep
+  -- serving from cache. This stamps the preview URL instead of a render-time
+  -- value, which would change on every render.
+  menu_updated_at timestamptz,
   is_queue_open boolean not null default true,
   created_at timestamptz not null default now()
 );

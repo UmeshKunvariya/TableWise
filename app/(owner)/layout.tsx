@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { signOut } from "@/app/actions/auth";
 import { requireOwner } from "@/lib/auth";
 
@@ -31,6 +33,30 @@ export default async function OwnerLayout({
             </button>
           </form>
         </div>
+
+        <nav className="mx-auto flex w-full max-w-3xl gap-1 px-2 pb-2">
+          {[
+            { href: "/dashboard", label: "Queue" },
+            { href: "/dashboard/qr", label: "QR poster" },
+            { href: "/dashboard/menu", label: "Menu" },
+          ].map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className="min-h-11 rounded-control px-3 py-2 text-sm font-medium text-ink-muted transition-colors hover:bg-surface-sunken"
+            >
+              {item.label}
+            </Link>
+          ))}
+          {owner.isSuperAdmin ? (
+            <Link
+              href="/admin"
+              className="min-h-11 rounded-control px-3 py-2 text-sm font-medium text-ink-muted transition-colors hover:bg-surface-sunken"
+            >
+              Admin
+            </Link>
+          ) : null}
+        </nav>
       </header>
       <main className="mx-auto w-full max-w-3xl flex-1 p-4">{children}</main>
     </div>

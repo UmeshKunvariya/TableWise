@@ -8,14 +8,16 @@ sees each party appear instantly on a dashboard and taps to clear them as they'r
 
 ## Status
 
-Steps 1–5 of the build order in [`docs/PLAN.md`](docs/PLAN.md) are implemented: the
-app scaffold and theme, the database schema, owner auth, the geofenced join flow,
-and the live customer status page. Together these give a working end-to-end
-customer path — scan, join, watch your position update.
+All ten steps of the build order in [`docs/PLAN.md`](docs/PLAN.md) are implemented —
+the scaffold and theme, schema, owner auth, geofenced join flow, live status page,
+owner dashboard, QR poster, menu upload, and admin approvals. Both halves of the
+loop are closed: a customer can scan and join, and an owner can seat them.
 
-Not built yet: the owner dashboard, QR poster generation, the menu upload and
-viewer, and admin approvals (steps 6–10). Until the dashboard exists, watch the
-queue through the Supabase Studio table view.
+Not yet run against a real Supabase project. Everything so far is verified by the
+test suite and a production build; the numbers below come from in-process Postgres,
+not the live stack.
+
+Payments are deliberately out of scope.
 
 ## Stack
 
@@ -48,6 +50,14 @@ npm run dev
 
 Never commit `.env.local`. The service role key bypasses all database access rules and
 must stay server-side.
+
+New restaurants register at `/signup` and land in `pending` — they cannot take a queue
+until approved. Approvals happen at `/admin`, which is only reachable by a super admin;
+promote your own account once, directly in the database:
+
+```sql
+update profiles set is_super_admin = true where user_id = '<your-auth-user-id>';
+```
 
 ## Tests
 

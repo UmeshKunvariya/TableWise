@@ -1,8 +1,39 @@
 import "server-only";
 
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
 import { createClient } from "@/lib/supabase/server";
+
+/**
+ * Gate for the super-admin approval screen.
+ *
+ * Separate from requireOwner() because an admin need not own a restaurant —
+ * requireOwner() would bounce them to /pending. Unauthorized visitors get a 404
+ * rather than a redirect, so the page's existence isn't advertised.
+ */
+export async function requireSuperAdmin(): Promise<{ userId: string }> {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("is_super_admin")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (!profile?.is_super_admin) {
+    notFound();
+  }
+
+  return { userId: user.id };
+}
 
 export type OwnerContext = {
   userId: string;
